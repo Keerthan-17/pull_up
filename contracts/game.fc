@@ -1,0 +1,33 @@
+#include "imports/stdlib.fc";
+
+;; Storage structure: (owner_address, high_score)
+(slice, int) load_data() inline {
+    var ds = get_data().begin_parse();
+    return (ds~load_msg_addr(), ds~load_uint(32));
+}
+
+() save_data(slice owner_address, int high_score) impure inline {
+    set_data(begin_cell()
+        .store_slice(owner_address)
+        .store_uint(high_score, 32)
+        .end_cell());
+}
+
+() recv_internal(int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) { 
+        return (); 
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    slice sender_address = cs~load_msg_addr();
+    
+    (slice owner_address, int current_high_score) = load_data();
+    
+    int new_score = in_msg_body~load_uint(32);
+    
+    ;; Update if new score is higher
+    if (new_score > current_high_score) {
+        save_data(owner_address, new_score);
+    }
+} 
